@@ -1,5 +1,14 @@
 import xml.etree.ElementTree as ET
 
+def style_attrib_to_dict(style):
+    d = {}
+    for attrib in style.split(";"):
+        attrib = attrib.split("=")
+        try:
+            d[attrib[0]]=attrib[1]
+        except IndexError:
+            pass
+    return d
 
 def create_dics_form_xml(xml, vertices, edges):
     tree = ET.parse(xml)
@@ -11,13 +20,13 @@ def create_dics_form_xml(xml, vertices, edges):
             edge = {}
             edge["source"] = child.get("source")
             edge["target"] = child.get("target")
-            edge["style"] = child.get("style")
+            edge["style"] = style_attrib_to_dict(child.get("style"))
             edges.append(edge)
         else:
             vertice = {}
             vertice["id"] = child.get("id")
             vertice["value"] = child.get("value")
-            vertice["style"] = child.get("style")
+            vertice["style"] = style_attrib_to_dict(child.get("style"))
             vertices.append(vertice)
             
 def print_connections(vertices, edges):
