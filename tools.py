@@ -10,6 +10,15 @@ def style_attrib_to_dict(style):
             pass
     return d
 
+def arrow_translate(ArrowType, ArrowFill):
+    txt = "normal"
+    if ArrowFill == "0":
+        txt = "o" + "normal"
+
+    if ArrowType == None:
+        return None
+    return txt
+
 def create_dics_form_xml(xml, vertices, edges):
     tree = ET.parse(xml)
     root = tree.getroot().find("diagram").find("mxGraphModel").find("root")
@@ -20,6 +29,8 @@ def create_dics_form_xml(xml, vertices, edges):
             edge = {}
             edge["source"] = child.get("source")
             edge["target"] = child.get("target")
+            edge["arrowhead"] = arrow_translate(child.get("endArrow"),child.get("endFill"))
+            edge["arrowtail"] = arrow_translate(child.get("startArrow"),child.get("startFill"))
             edge["style"] = style_attrib_to_dict(child.get("style"))
             edges.append(edge)
         else:
@@ -31,9 +42,15 @@ def create_dics_form_xml(xml, vertices, edges):
             
 def print_connections(vertices, edges):
     print("digraph {")
-    for egde in edges:
-        source = egde.get("source")
-        target = egde.get("target")
+    for edge in edges:
+        source = edge.get("source")
+        target = edge.get("target")
+        extras = ""
+        if edge["arrowhead"] is not None:
+            extras = extras + f"arrowhead={edge['arrowhead']}"
+            
+        if edge["arrowtail"] is not None:
+            extras = extras + f"arrowtail={edge['arrowtail']}"
         source_value = ""
         target_value = ""
         for vertice in vertices:
@@ -41,7 +58,7 @@ def print_connections(vertices, edges):
                 source_value = vertice.get("value")
             if vertice["id"] == target:
                 target_value = vertice.get("value")
-        print(f"{source_value}->{target_value}")
+        print(f"{source_value}->{target_value} {extras}")
     print("}")
 edges = []
 vertices = []
