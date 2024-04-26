@@ -21,10 +21,15 @@ def create_dics_form_xml(xml, vertices, edges):
 
         if "source" in child.attrib and "target" in child.attrib:
             edge = {}
+            edge["id"] = child.get("id")
             edge["source"] = child.get("source")
             edge["target"] = child.get("target")
             edge["style"] = style_attrib_to_dict(child.get("style"))
             edges.append(edge)
+        elif "edgeLabel" in child.get("style"):
+            next((edge for edge in edges if edge["id"] == child.get("parent")), None)
+            if edge is not None:
+                edge["label"] = child.get("value")
         else:
             vertice = {}
             vertice["id"] = child.get("id")
@@ -46,19 +51,34 @@ def create_dics_form_xml(xml, vertices, edges):
 #        print(f"{source_value}->{target_value}")
 #    print("}")
 
+def label_to_args(args,label):
+    if label:
+        soup = BeautifulSoup(label,"html.parser")
+        args["label"] = ''.join(soup.stripped_strings)
+        
+        pattern = r'font color="([^"]*)"'
+        match = re.search(pattern, label)
+        if match:
+            font_color = match.group(1)
+            args["fontcolor"] = font_color
+    
+
 def add_connections(graph, vertices, edges):
     for edge in edges:
         source = edge.get("source")
         target = edge.get("target")
+        edge_label = edge.get("label")
         source_value = ""
         target_value = ""
+        args = {}
+        label_to_args(args,edge_label)
         for vertice in vertices:
             if vertice["id"] == source:
                 source_value = vertice['id']
             if vertice["id"] == target:
                 target_value = vertice['id']
         if source_value != "" and target_value != "":
-            graph.add_edge(source_value, target_value)
+            graph.add_edge(source_value, target_value,**args)
 
 def add_vertices(graph, vertices):
     for vertice in vertices:
@@ -128,3 +148,4 @@ def diagram(drawio_file):
 #diagram("test3.drawio")
 #diagram("quest00_diagram_DragonStory.drawio")
 #diagram("quest2023-13_DragonStory_gameplay_quest_DragonStory_world_DragonStory_20230225174947_IGG.drawio")
+# diagram("test_label.drawio")
