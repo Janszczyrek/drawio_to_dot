@@ -6,3 +6,5 @@
 - obsługa kolorów
 - obsługa rożnych typów strzałek
 - obsługa atrybutów krawędzi
+- labele
+- bezwzgledna pozycja na ekranie dla danego wierzcholka
