@@ -22,6 +22,7 @@ def create_dics_form_xml(xml, vertices, edges):
         if "source" in child.attrib and "target" in child.attrib:
             edge = {}
             edge["id"] = child.get("id")
+            edge["value"] = child.get("value")
             edge["source"] = child.get("source")
             edge["target"] = child.get("target")
             edge["style"] = style_attrib_to_dict(child.get("style"))
@@ -35,21 +36,8 @@ def create_dics_form_xml(xml, vertices, edges):
             vertice["id"] = child.get("id")
             vertice["value"] = child.get("value")
             vertice["style"] = style_attrib_to_dict(child.get("style"))
+            vertice["style_no_dict"] = child.get("style")
             vertices.append(vertice)
-
-#def print_connections(vertices, edges):
-#    for edge in edges:
-#        source = edge.get("source")
-#        target = edge.get("target")
-#        source_value = ""
-#        target_value = ""
-#        for vertice in vertices:
-#            if vertice["id"] == source:
-#                source_value = vertice.get("value")
-#            if vertice["id"] == target:
-#                target_value = vertice.get("value")
-#        print(f"{source_value}->{target_value}")
-#    print("}")
 
 def label_to_args(args,label):
     if label:
@@ -65,6 +53,7 @@ def label_to_args(args,label):
 
 def add_connections(graph, vertices, edges):
     for edge in edges:
+
         source = edge.get("source")
         target = edge.get("target")
         edge_label = edge.get("label")
@@ -82,52 +71,43 @@ def add_connections(graph, vertices, edges):
 
 def add_vertices(graph, vertices):
     for vertice in vertices:
-        value = ""
-        value = vertice.get("value")
-        name = vertice['id']
+        if "edgeLabel" in vertice["style_no_dict"]:
+            continue
 
+        name = vertice['id']
         graph.add_node(name)
 
-        style = ""
-        style = vertice.get("style")
-        style_list = list(style.keys())
-
-        #vertice_style = ""
-        
-        if value != "":
+        value = vertice.get("value")
+        if value:
             soup = BeautifulSoup(value, 'html.parser')
             label = ''.join(soup.stripped_strings)
-            graph.get_node(name).attr['label'] = label
         else:
-            graph.get_node(name).attr['label'] = value
+            label = ""
+        graph.get_node(name).attr['label'] = label
 
+        style = vertice.get("style")
+        style_list = list(style.keys())
+        
         pattern = r'font face="([^"]*)"'
         match = re.search(pattern, value)
         if match:
             font_value = match.group(1)
             graph.get_node(name).attr["fontname"] = font_value
-            #vertice_style += f"fontname=\"{font_value}\", "
 
         pattern = r'font-size: ([^"]*)px'
         match = re.search(pattern, value)
         if match:
             font_value = match.group(1)
             graph.get_node(name).attr["fontsize"] = font_value
-            #vertice_style += f"fontsize={font_value}, "
-        
+
         for s in style_list:
             if s == 'fillColor':
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
                 graph.get_node(name).attr["style"] = "filled"
-                #vertice_style += f"{s}=\"{style[s].lower()}\", style=filled"
             elif s == 'strokeColor':
                 graph.get_node(name).attr["color"] = style[s].lower()
-                #vertice_style += f"color=\"{style[s].lower()}\""
             else:
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
-                #vertice_style += f"{s}={style[s].lower()}"
-
-        #print("dodano: " + name + "\n")
         
 
 def diagram(drawio_file):
