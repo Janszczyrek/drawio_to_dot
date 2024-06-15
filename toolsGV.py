@@ -3,12 +3,47 @@ from bs4 import BeautifulSoup
 import pygraphviz as pgv
 import re
 
+shapes_dict = {
+    "ellipse":"ellipse",
+    "rhombus":"diamond",
+    "trapezoid":"trapezium",
+    "parallelogram":"parallelogram",
+    "hexagon":"hexagon",
+    "step":"cds",
+    "process":"note", 
+    "singleArrow":"rarrow"
+}
+def shape_translator(drawio_shape,style):
+    if "star" in drawio_shape:
+        return "star"
+    if "singleArrow" == drawio_shape:
+        if "direction" in style:
+            dir = style[style.find("direction=")+10:].split(";")[0]
+            if dir == "west":
+                return "larrow"
+        if "rotation" in style:
+            rot = style[style.find("rotation=")+9:].split(";")[0]
+            if rot == "-180":
+                return "larrow"
+        return shapes_dict[drawio_shape]
+    else:
+        try:
+            return shapes_dict[drawio_shape]
+        except KeyError:
+            return "box"
+
 def style_attrib_to_dict(style):
     d = {}
+    d["shape"] = "box"
     for attrib in style.split(";"):
         attrib = attrib.split("=")
         try:
-            d[attrib[0]]=attrib[1]
+            if attrib[0] in shapes_dict.keys():
+                d["shape"] = shape_translator(attrib[0],style)
+            elif attrib[0] == "shape":
+                d[attrib[0]] = shape_translator(attrib[1],style)
+            else:
+                d[attrib[0]]=attrib[1]
         except IndexError:
             pass
     return d
@@ -129,3 +164,4 @@ def diagram(drawio_file):
 #diagram("quest00_diagram_DragonStory.drawio")
 #diagram("quest2023-13_DragonStory_gameplay_quest_DragonStory_world_DragonStory_20230225174947_IGG.drawio")
 # diagram("test_label.drawio")
+#diagram("shapes.drawio")
