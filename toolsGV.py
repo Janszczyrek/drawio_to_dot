@@ -13,6 +13,24 @@ shapes_dict = {
     "process":"note", 
     "singleArrow":"rarrow"
 }
+
+arrow_dict = {
+    "classic":"normal",
+    "oval":"dot",
+    "none":"none",
+    "diamond":"diamond",
+    "open":"open",
+    "classicThin":"normal",
+    "openThin":"open",
+    "classicThin":"normal",
+    "openAsync":"lopen",
+    "block":"normal",
+    "blockThin":"normal",
+    "box":"box",
+    "circlePlus":"odot",
+    "ERmany":"oinv",
+}
+
 def shape_translator(drawio_shape,style):
     if "star" in drawio_shape:
         return "star"
@@ -32,11 +50,40 @@ def shape_translator(drawio_shape,style):
         except KeyError:
             return "box"
 
+def arrowtype_translator(typeofarrow, filldata=None):
+    arrowtype = "normal"
+    if typeofarrow in arrow_dict.keys():
+        arrowtype = arrow_dict[typeofarrow]
+
+    if filldata is not None and filldata=="0":
+        arrowtype = "o" + arrowtype
+    return arrowtype
+        
+def divide(x):
+    x = x.split("=")
+    if len(x) == 1:
+        x.append(x[0])
+        x[0] = "styleid"
+    return x
+    
+
 def style_attrib_to_dict(style):
+    style = style[:-1]
+    detaildict = dict(divide(x) for x in style.split(";"))
     d = {}
     d["shape"] = "box"
     for attrib in style.split(";"):
         attrib = attrib.split("=")
+        if attrib[0] == 'endArrow':
+            if "endFill" in detaildict.keys():
+                d["arrowhead"] = arrowtype_translator(attrib[1], detaildict["endFill"])
+            else:
+                d["arrowhead"] = arrowtype_translator(attrib[1])
+        if attrib[0] == 'startArrow':
+            if "startFill" in detaildict.keys():
+                d["arrowtail"] = arrowtype_translator(attrib[1], detaildict["startFill"])
+            else:
+                d["arrowtail"] = arrowtype_translator(attrib[1])
         try:
             if attrib[0] in shapes_dict.keys():
                 d["shape"] = shape_translator(attrib[0],style)
@@ -46,6 +93,7 @@ def style_attrib_to_dict(style):
                 d[attrib[0]]=attrib[1]
         except IndexError:
             pass
+        
     return d
 
 def create_dics_form_xml(xml, vertices, edges):
@@ -103,6 +151,14 @@ def add_connections(graph, vertices, edges):
                 target_value = vertice['id']
         if source_value != "" and target_value != "":
             graph.add_edge(source_value, target_value,**args)
+
+            if "arrowhead" in edge["style"].keys() and edge["style"]["arrowhead"] is not None:
+                graph.get_edge(source_value, target_value).attr['arrowhead'] = edge["style"]["arrowhead"]
+            if "arrowtail" in edge["style"].keys() and edge["style"]["arrowtail"] is not None:
+                graph.get_edge(source_value, target_value).attr['arrowtail'] = edge["style"]["arrowtail"]
+            
+
+            
 
 def add_vertices(graph, vertices):
     for vertice in vertices:
@@ -163,5 +219,6 @@ def diagram(drawio_file):
 #diagram("test3.drawio")
 #diagram("quest00_diagram_DragonStory.drawio")
 #diagram("quest2023-13_DragonStory_gameplay_quest_DragonStory_world_DragonStory_20230225174947_IGG.drawio")
-# diagram("test_label.drawio")
+#diagram("test_label.drawio")
 #diagram("shapes.drawio")
+#diagram("testarrowtypes.drawio")
