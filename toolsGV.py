@@ -156,6 +156,9 @@ def add_connections(graph, vertices, edges):
                 graph.get_edge(source_value, target_value).attr['arrowhead'] = edge["style"]["arrowhead"]
             if "arrowtail" in edge["style"].keys() and edge["style"]["arrowtail"] is not None:
                 graph.get_edge(source_value, target_value).attr['arrowtail'] = edge["style"]["arrowtail"]
+            print(edge["style"].keys())
+            if "strokeColor" in edge["style"].keys() and edge["style"]["strokeColor"] is not None:
+                graph.get_edge(source_value, target_value).attr['color'] = edge["style"]["strokeColor"]
             
 
             
