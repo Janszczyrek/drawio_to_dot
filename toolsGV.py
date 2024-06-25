@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 from bs4 import BeautifulSoup
 import pygraphviz as pgv
 import re
+import argparse
 
 shapes_dict = {
     "ellipse":"ellipse",
@@ -216,6 +217,28 @@ def diagram(drawio_file):
 
     print(graph)
     print("\n")
+    if args.output is not None:
+        with open(args.output, 'w+') as dot_file:
+            dot_file.write(graph.to_string())
+    if args.output_image is not None:
+        graph.layout(args.layout)
+        graph.draw(args.output_image)
+
+parser = argparse.ArgumentParser(
+    prog="drawio_to_dot",
+    description="script that converts a given drawio file into a DOT graph format and renders it as graphics."
+)
+parser.add_argument("-i","--input",action="store", help="input .drawio file", required=True)
+parser.add_argument("-o","--output",action="store", help="output .dot file", default="out.dot")
+parser.add_argument("--output-image",action="store", help="output image", required=False)
+parser.add_argument("-l","--layout",action="store",
+                    help="layout engine to be used when creating output image",
+                    required=False, choices=["dot","neato","twopi","circo","fdp","nop"], default="dot")
+parser.add_argument("-p", "--pin",action="store_true", help="keep nodes at position given in .drawio file", required=False)
+args = parser.parse_args()
+
+if args.input is not None:
+    diagram(args.input)
 
 #diagram("test1.drawio")
 #diagram("test2.drawio")
