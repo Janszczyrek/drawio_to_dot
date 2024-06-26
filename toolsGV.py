@@ -4,6 +4,8 @@ import pygraphviz as pgv
 import re
 import argparse
 
+scale = 75
+
 global_edges = { }
 global_vertices = { }
 
@@ -218,8 +220,8 @@ def add_vertices(graph, vertices):
                 if parentobj.get("x") is not None:
                     posx += int(parentobj.get("x"))
                 if parentobj.get("y") is not None:
-                    posy += int(parentobj.get("y"))
-            graph.get_node(name).attr["pos"] = str(posx / 100) + "," + str(posy / 100) + "!"
+                    posy -= int(parentobj.get("y"))
+            graph.get_node(name).attr["pos"] = str(posx / scale) + "," + str(-posy / scale) + "!"
             print(str(posx) + "," + str(posy))
             
         for s in style_list:
