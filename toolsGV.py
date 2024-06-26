@@ -4,6 +4,9 @@ import pygraphviz as pgv
 import re
 import argparse
 
+global_edges = { }
+global_vertices = { }
+
 shapes_dict = {
     "ellipse":"ellipse",
     "rhombus":"diamond",
@@ -100,7 +103,8 @@ def style_attrib_to_dict(style):
 def create_dics_form_xml(xml, vertices, edges):
     tree = ET.parse(xml)
     root = tree.getroot().find("diagram").find("mxGraphModel").find("root")
-
+    global global_edges
+    global global_vertices
     for child in root[2:]:
 
         if "source" in child.attrib and "target" in child.attrib:
@@ -111,6 +115,7 @@ def create_dics_form_xml(xml, vertices, edges):
             edge["target"] = child.get("target")
             edge["style"] = style_attrib_to_dict(child.get("style"))
             edges.append(edge)
+            global_edges[child.get("id")] = edge
         elif "edgeLabel" in child.get("style"):
             next((edge for edge in edges if edge["id"] == child.get("parent")), None)
             if edge is not None:
@@ -121,7 +126,12 @@ def create_dics_form_xml(xml, vertices, edges):
             vertice["value"] = child.get("value")
             vertice["style"] = style_attrib_to_dict(child.get("style"))
             vertice["style_no_dict"] = child.get("style")
+            vertice["parent"] = child.get("parent")
+            for geometrychild in child:
+                vertice["x"] = geometrychild.get("x")
+                vertice["y"] = geometrychild.get("y")
             vertices.append(vertice)
+            global_vertices[child.get("id")] = vertice
 
 def label_to_args(args,label):
     if label:
@@ -159,11 +169,13 @@ def add_connections(graph, vertices, edges):
                 graph.get_edge(source_value, target_value).attr['arrowtail'] = edge["style"]["arrowtail"]
             if "strokeColor" in edge["style"].keys() and edge["style"]["strokeColor"] is not None:
                 graph.get_edge(source_value, target_value).attr['color'] = edge["style"]["strokeColor"]
+           
             
 
             
 
 def add_vertices(graph, vertices):
+    global global_vertices
     for vertice in vertices:
         if "edgeLabel" in vertice["style_no_dict"]:
             continue
@@ -194,6 +206,22 @@ def add_vertices(graph, vertices):
             font_value = match.group(1)
             graph.get_node(name).attr["fontsize"] = font_value
 
+        if vertice.get("x") is not None or vertice.get("y") is not None:
+            posx = 0
+            posy = 0
+            if vertice.get("x") is not None:
+                posx = int(vertice.get("x"))
+            if vertice.get("y") is not None:
+                posy = int(vertice.get("y"))
+            if vertice.get("parent") is not None and "parent" in global_vertices:
+                parentobj = global_vertices[vertice.get("parent")]
+                if parentobj.get("x") is not None:
+                    posx += int(parentobj.get("x"))
+                if parentobj.get("y") is not None:
+                    posy += int(parentobj.get("y"))
+            graph.get_node(name).attr["pos"] = str(posx / 100) + "," + str(posy / 100) + "!"
+            print(str(posx) + "," + str(posy))
+            
         for s in style_list:
             if s == 'fillColor':
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
@@ -216,9 +244,9 @@ def diagram(drawio_file):
 
     print(graph)
     print("\n")
-    if args.output is not None:
-        with open(args.output, 'w+') as dot_file:
-            dot_file.write(graph.to_string())
+    #if args.output is not None:
+     #   with open(args.output, 'w+') as dot_file:
+      #      dot_file.write(graph.to_string())
     if args.output_image is not None:
         graph.layout(args.layout)
         graph.draw(args.output_image)
