@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import pygraphviz as pgv
 import re
 import argparse
+from PIL import Image
+from urllib.parse import unquote
 
 scale = 75
 
@@ -103,8 +105,18 @@ def style_attrib_to_dict(style):
     return d
 
 def create_dics_form_xml(xml, vertices, edges):
-    tree = ET.parse(xml)
-    root = tree.getroot().find("diagram").find("mxGraphModel").find("root")
+    tree = None
+    root = None
+    if xml[-4:] == ".png":
+        im = Image.open(xml)
+        im.load()
+        xml = unquote(im.info["mxfile"])
+        tree = ET.fromstring(xml)
+        root = tree
+    else:
+        tree = ET.parse(xml)
+        root = tree.getroot()
+    root = root.find("diagram").find("mxGraphModel").find("root")
     global global_edges
     global global_vertices
     for child in root[2:]:
