@@ -80,6 +80,8 @@ def style_attrib_to_dict(style):
     detaildict = dict(divide(x) for x in style.split(";"))
     d = {}
     d["shape"] = "box"
+    if args.pin:
+        d["fixedsize"] = "true"
     for attrib in style.split(";"):
         attrib = attrib.split("=")
         if attrib[0] == 'endArrow':
@@ -144,6 +146,8 @@ def create_dics_form_xml(xml, vertices, edges):
             for geometrychild in child:
                 vertice["x"] = geometrychild.get("x")
                 vertice["y"] = geometrychild.get("y")
+                vertice["height"] = geometrychild.get("height")
+                vertice["width"] = geometrychild.get("width")
             vertices.append(vertice)
             global_vertices[child.get("id")] = vertice
 
@@ -220,13 +224,16 @@ def add_vertices(graph, vertices):
             font_value = match.group(1)
             graph.get_node(name).attr["fontsize"] = font_value
 
-        if vertice.get("x") is not None or vertice.get("y") is not None:
+        if vertice.get("x") is not None or vertice.get("y") is not None and args.pin:
             posx = 0
             posy = 0
             if vertice.get("x") is not None:
                 posx = int(vertice.get("x"))
             if vertice.get("y") is not None:
                 posy = int(vertice.get("y"))
+            if vertice.get("height") and vertice.get("width"):
+                posx = posx+int(vertice.get("width"))/2
+                posy = posy+int(vertice.get("height"))/2
             if vertice.get("parent") is not None and "parent" in global_vertices:
                 parentobj = global_vertices[vertice.get("parent")]
                 if parentobj.get("x") is not None:
@@ -236,6 +243,9 @@ def add_vertices(graph, vertices):
             graph.get_node(name).attr["pos"] = str(posx / scale) + "," + str(-posy / scale) + "!"
             print(str(posx) + "," + str(posy))
             
+        if vertice.get("height") and vertice.get("width") and args.pin:
+            graph.get_node(name).attr["height"] = str(int(vertice.get("height"))/scale)
+            graph.get_node(name).attr["width"] = str(int(vertice.get("width"))/scale)           
         for s in style_list:
             if s == 'fillColor':
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
@@ -275,7 +285,7 @@ parser.add_argument("--output-image",action="store", help="output image", requir
 parser.add_argument("-l","--layout",action="store",
                     help="layout engine to be used when creating output image",
                     required=False, choices=["dot","neato","twopi","circo","fdp","nop"], default="dot")
-parser.add_argument("-p", "--pin",action="store_true", help="keep nodes at position given in .drawio file", required=False)
+parser.add_argument("-p", "--pin",action="store_true", help="keep nodes size and position given in .drawio file", required=False)
 args = parser.parse_args()
 
 if args.input is not None:
