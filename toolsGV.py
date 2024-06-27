@@ -1,4 +1,7 @@
+import base64
+from xml.dom import minidom
 import xml.etree.ElementTree as ET
+import zlib
 from bs4 import BeautifulSoup
 import pygraphviz as pgv
 import re
@@ -183,11 +186,8 @@ def add_connections(graph, vertices, edges):
                 graph.get_edge(source_value, target_value).attr['arrowtail'] = edge["style"]["arrowtail"]
             if "strokeColor" in edge["style"].keys() and edge["style"]["strokeColor"] is not None:
                 graph.get_edge(source_value, target_value).attr['color'] = edge["style"]["strokeColor"]
-           
             
-
             
-
 def add_vertices(graph, vertices):
     global global_vertices
     for vertice in vertices:
@@ -234,7 +234,7 @@ def add_vertices(graph, vertices):
                 if parentobj.get("y") is not None:
                     posy -= int(parentobj.get("y"))
             graph.get_node(name).attr["pos"] = str(posx / scale) + "," + str(-posy / scale) + "!"
-            print(str(posx) + "," + str(posy))
+            #print(str(posx) + "," + str(posy))
             
         for s in style_list:
             if s == 'fillColor':
@@ -244,7 +244,29 @@ def add_vertices(graph, vertices):
                 graph.get_node(name).attr["color"] = style[s].lower()
             else:
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
-        
+
+def decompress_diagram(input: str, output: str) -> None:
+    with open(input, 'r') as file:
+        diagram_file = file.read()
+    
+    mxfile_header_match = re.search(r'<mxfile[^>]+>', diagram_file)
+    mxfile_header = mxfile_header_match.group(0)
+    
+    diagram_match = re.search(r"(<diagram.*?>)([\s\S]*?)(</diagram>)", diagram_file)    
+    opening_tag = diagram_match.group(1)
+    compressed_data = diagram_match.group(2)
+    closing_tag = diagram_match.group(3)
+    
+    decompressed_data = zlib.decompress(base64.b64decode(compressed_data), -15)
+    decoded_diagram = unquote(decompressed_data.decode())
+    
+    full_content = f"{mxfile_header}{opening_tag}{decoded_diagram}{closing_tag}</mxfile>"
+
+    dom = minidom.parseString(full_content)
+    full_content = dom.toprettyxml(indent="    ")
+    
+    with open(output, 'w') as output_file:
+        output_file.write(full_content)
 
 def diagram(drawio_file):
     edges = []
@@ -275,11 +297,16 @@ parser.add_argument("--output-image",action="store", help="output image", requir
 parser.add_argument("-l","--layout",action="store",
                     help="layout engine to be used when creating output image",
                     required=False, choices=["dot","neato","twopi","circo","fdp","nop"], default="dot")
-parser.add_argument("-p", "--pin",action="store_true", help="keep nodes at position given in .drawio file", required=False)
+parser.add_argument("-p", "--pin", action="store_true", help="keep nodes at position given in .drawio file", required=False)
+parser.add_argument("-d", "--decompress", action="store_true", help="decompress the input .drawio file before processing", required=False)
 args = parser.parse_args()
 
 if args.input is not None:
-    diagram(args.input)
+    if args.decompress:
+        decompress_diagram(args.input, "decompressed_diagram.drawio")
+        diagram("decompressed_diagram.drawio")
+    else:
+        diagram(args.input)
 
 #diagram("test1.drawio")
 #diagram("test2.drawio")
