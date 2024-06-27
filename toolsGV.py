@@ -204,7 +204,9 @@ def add_vertices(graph, vertices):
         value = vertice.get("value")
         if value:
             soup = BeautifulSoup(value, 'html.parser')
-            label = ''.join(soup.stripped_strings)
+            #label = ''.join(soup.stripped_strings)
+            label = word_wrap(list(soup.stripped_strings))
+            print(list(soup.stripped_strings))
         else:
             label = ""
         graph.get_node(name).attr['label'] = label
@@ -254,7 +256,18 @@ def add_vertices(graph, vertices):
                 graph.get_node(name).attr["color"] = style[s].lower()
             else:
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
-        
+
+def word_wrap(strings):
+    phrases = list(strings)
+    for i in range(0, len(phrases)):
+        phrase = str(phrases[i])
+        phrase = phrase.replace(';', '\n')
+        index = phrase.find(' ', 31)
+        if index != -1:
+            phrase = phrase[:index] + '\n' + phrase[index + 1:]
+        phrases[i] = phrase
+    return ''.join(phrases)
+
 
 def diagram(drawio_file):
     edges = []
