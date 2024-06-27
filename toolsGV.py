@@ -13,6 +13,7 @@ scale = 75
 
 global_edges = { }
 global_vertices = { }
+args = None
 
 shapes_dict = {
     "ellipse":"ellipse",
@@ -109,6 +110,42 @@ def style_attrib_to_dict(style):
         
     return d
 
+def create_new_edges(child, vertices, edges):
+    pointarray = child.find("mxGeometry").find("Array")
+    tempverticename = child.get("source") + "-" + child.get("target")
+    prevedge = child.get("source")
+    helperid = 1
+    if pointarray is not None:
+        for point in pointarray:
+            newedge = {}
+            newedge["id"] = f"{tempverticename}_{helperid}"
+            newedge["source"] = prevedge
+            newedge["created"] = True
+            newedge["style"] = { }
+            newedge["style"]["arrowhead"] = "none"
+            newedge["style"]["arrowtail"] = "none"
+            newvertice = {}
+            newvertice["id"] = f"{tempverticename}_node_{helperid}"
+            newedge["target"] = newvertice["id"]
+            newvertice["x"] = point.get("x")
+            newvertice["y"] = point.get("y")
+            newvertice["fixedsize"] = "yes"
+            newvertice["label"] = ""
+            newvertice["width"] = 0
+            newvertice["height"] = 0
+            newvertice["value"] = ""
+            newvertice["style"] = style_attrib_to_dict(child.get("style"))
+            newvertice["style_no_dict"] = child.get("style")
+            prevedge = newvertice["id"]
+            helperid += 1
+            vertices.append(newvertice)
+            edges.append(newedge)
+    else:
+        geometrychild = child.find("mxGeometry")
+        if geometrychild is not None:
+            pass
+    return prevedge
+
 def create_dics_form_xml(xml, vertices, edges):
     tree = None
     root = None
@@ -133,6 +170,9 @@ def create_dics_form_xml(xml, vertices, edges):
             edge["source"] = child.get("source")
             edge["target"] = child.get("target")
             edge["style"] = style_attrib_to_dict(child.get("style"))
+            if args.keep_arrows_pos:
+                edge["source"] = create_new_edges(child, vertices, edges)
+                    
             edges.append(edge)
             global_edges[child.get("id")] = edge
         elif "edgeLabel" in child.get("style"):
@@ -183,11 +223,14 @@ def add_connections(graph, vertices, edges):
                 target_value = vertice['id']
         if source_value != "" and target_value != "":
             graph.add_edge(source_value, target_value,**args)
-
             if "arrowhead" in edge["style"].keys() and edge["style"]["arrowhead"] is not None:
                 graph.get_edge(source_value, target_value).attr['arrowhead'] = edge["style"]["arrowhead"]
+            #else if:
+             #   graph.get_edge(source_value, target_value).attr['arrowhead'] = "none"
             if "arrowtail" in edge["style"].keys() and edge["style"]["arrowtail"] is not None:
                 graph.get_edge(source_value, target_value).attr['arrowtail'] = edge["style"]["arrowtail"]
+           # else:
+            #    graph.get_edge(source_value, target_value).attr['arrowtail'] = "none"
             if "strokeColor" in edge["style"].keys() and edge["style"]["strokeColor"] is not None:
                 graph.get_edge(source_value, target_value).attr['color'] = edge["style"]["strokeColor"]
             
@@ -230,20 +273,19 @@ def add_vertices(graph, vertices):
             posx = 0
             posy = 0
             if vertice.get("x") is not None:
-                posx = int(vertice.get("x"))
+                posx = float(vertice.get("x"))
             if vertice.get("y") is not None:
-                posy = int(vertice.get("y"))
+                posy = float(vertice.get("y"))
             if vertice.get("height") and vertice.get("width"):
-                posx = posx+int(vertice.get("width"))/2
-                posy = posy+int(vertice.get("height"))/2
+                posx = posx+float(vertice.get("width"))/2
+                posy = posy+float(vertice.get("height"))/2
             if vertice.get("parent") is not None and "parent" in global_vertices:
                 parentobj = global_vertices[vertice.get("parent")]
                 if parentobj.get("x") is not None:
-                    posx += int(parentobj.get("x"))
+                    posx += float(parentobj.get("x"))
                 if parentobj.get("y") is not None:
-                    posy -= int(parentobj.get("y"))
+                    posy -= float(parentobj.get("y"))
             graph.get_node(name).attr["pos"] = str(posx / scale) + "," + str(-posy / scale) + "!"
-            #print(str(posx) + "," + str(posy))
             
         if vertice.get("height") and vertice.get("width") and args.pin:
             graph.get_node(name).attr["height"] = str(int(vertice.get("height"))/scale)
@@ -256,6 +298,10 @@ def add_vertices(graph, vertices):
                 graph.get_node(name).attr["color"] = style[s].lower()
             else:
                 graph.get_node(name).attr[s.lower()] = style[s].lower()
+        if "fixedsize" in vertice:
+            graph.get_node(name).attr["fixedsize"] = True
+            graph.get_node(name).attr["width"] = 0
+            graph.get_node(name).attr["height"] = 0    
 
 def decompress_diagram(input: str, output: str) -> None:
     with open(input, 'r') as file:
@@ -292,6 +338,7 @@ def word_wrap(strings):
     return ''.join(phrases)
 
 
+
 def diagram(drawio_file):
     edges = []
     vertices = []
@@ -321,7 +368,8 @@ parser.add_argument("--output-image",action="store", help="output image", requir
 parser.add_argument("-l","--layout",action="store",
                     help="layout engine to be used when creating output image",
                     required=False, choices=["dot","neato","twopi","circo","fdp","nop"], default="dot")
-parser.add_argument("-p", "--pin", action="store_true", help="keep nodes at position given in .drawio file", required=False)
+parser.add_argument("-p", "--pin",action="store_true", help="keep nodes size and position given in .drawio file", required=False)
+parser.add_argument("-k", "--keep_arrows_pos",action="store_true", help="try to replicate the edge trajectory as in .drawio file", required=False)
 parser.add_argument("-d", "--decompress", action="store_true", help="decompress the input .drawio file before processing", required=False)
 args = parser.parse_args()
 
