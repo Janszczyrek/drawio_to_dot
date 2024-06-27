@@ -1,4 +1,7 @@
+import base64
+from xml.dom import minidom
 import xml.etree.ElementTree as ET
+import zlib
 from bs4 import BeautifulSoup
 import pygraphviz as pgv
 import re
@@ -230,11 +233,8 @@ def add_connections(graph, vertices, edges):
             #    graph.get_edge(source_value, target_value).attr['arrowtail'] = "none"
             if "strokeColor" in edge["style"].keys() and edge["style"]["strokeColor"] is not None:
                 graph.get_edge(source_value, target_value).attr['color'] = edge["style"]["strokeColor"]
-           
             
-
             
-
 def add_vertices(graph, vertices):
     global global_vertices
     for vertice in vertices:
@@ -247,7 +247,9 @@ def add_vertices(graph, vertices):
         value = vertice.get("value")
         if value:
             soup = BeautifulSoup(value, 'html.parser')
-            label = ''.join(soup.stripped_strings)
+            #label = ''.join(soup.stripped_strings)
+            label = word_wrap(list(soup.stripped_strings))
+            print(list(soup.stripped_strings))
         else:
             label = ""
         graph.get_node(name).attr['label'] = label
@@ -299,8 +301,43 @@ def add_vertices(graph, vertices):
         if "fixedsize" in vertice:
             graph.get_node(name).attr["fixedsize"] = True
             graph.get_node(name).attr["width"] = 0
-            graph.get_node(name).attr["height"] = 0
-        
+            graph.get_node(name).attr["height"] = 0    
+
+def decompress_diagram(input: str, output: str) -> None:
+    with open(input, 'r') as file:
+        diagram_file = file.read()
+    
+    mxfile_header_match = re.search(r'<mxfile[^>]+>', diagram_file)
+    mxfile_header = mxfile_header_match.group(0)
+    
+    diagram_match = re.search(r"(<diagram.*?>)([\s\S]*?)(</diagram>)", diagram_file)    
+    opening_tag = diagram_match.group(1)
+    compressed_data = diagram_match.group(2)
+    closing_tag = diagram_match.group(3)
+    
+    decompressed_data = zlib.decompress(base64.b64decode(compressed_data), -15)
+    decoded_diagram = unquote(decompressed_data.decode())
+    
+    full_content = f"{mxfile_header}{opening_tag}{decoded_diagram}{closing_tag}</mxfile>"
+
+    dom = minidom.parseString(full_content)
+    full_content = dom.toprettyxml(indent="    ")
+    
+    with open(output, 'w') as output_file:
+        output_file.write(full_content)
+
+def word_wrap(strings):
+    phrases = list(strings)
+    for i in range(0, len(phrases)):
+        phrase = str(phrases[i])
+        phrase = phrase.replace(';', '\n')
+        index = phrase.find(' ', 31)
+        if index != -1:
+            phrase = phrase[:index] + '\n' + phrase[index + 1:]
+        phrases[i] = phrase
+    return ''.join(phrases)
+
+
 
 def diagram(drawio_file):
     edges = []
@@ -333,10 +370,15 @@ parser.add_argument("-l","--layout",action="store",
                     required=False, choices=["dot","neato","twopi","circo","fdp","nop"], default="dot")
 parser.add_argument("-p", "--pin",action="store_true", help="keep nodes size and position given in .drawio file", required=False)
 parser.add_argument("-k", "--keep_arrows_pos",action="store_true", help="try to replicate the edge trajectory as in .drawio file", required=False)
+parser.add_argument("-d", "--decompress", action="store_true", help="decompress the input .drawio file before processing", required=False)
 args = parser.parse_args()
 
 if args.input is not None:
-    diagram(args.input)
+    if args.decompress:
+        decompress_diagram(args.input, "decompressed_"+args.input)
+        diagram("decompressed_"+args.input)
+    else:
+        diagram(args.input)
 
 #diagram("test1.drawio")
 #diagram("test2.drawio")

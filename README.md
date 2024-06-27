@@ -1,5 +1,6 @@
 # TODO
-- dekompresja pliku w razie potrzeby
+<del>- dekompresja pliku w razie potrzeby</del>
+
 - krawędzie nieprzecinające innych obiektów
 - kontrolowanie kolejnosci renderowania obiektow
 
