@@ -327,8 +327,8 @@ args = parser.parse_args()
 
 if args.input is not None:
     if args.decompress:
-        decompress_diagram(args.input, "decompressed_diagram.drawio")
-        diagram("decompressed_diagram.drawio")
+        decompress_diagram(args.input, "decompressed_"+args.input)
+        diagram("decompressed_"+args.input)
     else:
         diagram(args.input)
 
