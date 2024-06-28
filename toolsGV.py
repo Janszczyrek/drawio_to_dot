@@ -351,9 +351,9 @@ def diagram(drawio_file):
 
     print(graph)
     print("\n")
-    #if args.output is not None:
-     #   with open(args.output, 'w+') as dot_file:
-      #      dot_file.write(graph.to_string())
+    if args.output is not None:
+       with open(args.output, 'w+') as dot_file:
+           dot_file.write(graph.to_string())
     if args.output_image is not None:
         graph.layout(args.layout)
         graph.draw(args.output_image)
